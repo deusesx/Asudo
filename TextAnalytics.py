@@ -12,7 +12,7 @@ def optimal_length_calculations(df_bd: pd.DataFrame, threshold: int=11) -> pd.Da
     nums = re.compile("[+-]?\d+(?:\.\d+)?")
     df['text'] = df['text'].apply(lambda x: nums.sub(' ', punkt_re.sub(' ', x)))
     length_profile = pd.DataFrame()
-    length_profile['Texts'] = df.groupby('user_id')['text'].agg(lambda x: [t for t in x])
+    length_profile['Texts'] = df.groupby('uid')['text'].agg(lambda x: [t for t in x])
     length_profile['Lengths'] = length_profile['Texts'].apply(lambda x: [len(t.split()) for t in x])
     length_profile['Count'] = length_profile['Texts'].apply(len)
     length_profile['Mean'] = length_profile['Lengths'].apply(pd.np.mean)
@@ -35,10 +35,9 @@ def optimal_length_calculations(df_bd: pd.DataFrame, threshold: int=11) -> pd.Da
     return result
 
 def recalculate_optimal_length_for_user(user_id: int, df_bd: pd.DataFrame) -> list:
-    dx = optimal_length_calculations(df_bd[df_bd['user_id'] == user_id])
+    dx = optimal_length_calculations(df_bd[df_bd['uid'] == user_id])
     print(dx)
-    return {'message_length_class': dx.loc[user_id]['Median'], 
-            'message_length_confidence': dx.loc[user_id]['Confidence']}
+    return dx
 
 def smile_rate_calsulations(df_bd: pd.DataFrame, threshold: int=7) -> pd.DataFrame:
     df = df_bd[~df_bd['text'].isnull()].copy()
@@ -47,16 +46,14 @@ def smile_rate_calsulations(df_bd: pd.DataFrame, threshold: int=7) -> pd.DataFra
     df['sm_s'] = df['text'].apply(lambda x: re.findall(sm, x))
     df['sm_s__len'] = df['sm_s'].apply(len)
     df['hasSmile'] = (df['sm_s__len'] > 0).astype(int)
-    smile_profile = pd.DataFrame(df.groupby('user_id')['hasSmile'].sum())
-    smile_profile['msg_cnt'] = df.groupby('user_id')['text'].count()
+    smile_profile = pd.DataFrame(df.groupby('uid')['hasSmile'].sum())
+    smile_profile['msg_cnt'] = df.groupby('uid')['text'].count()
     smile_profile['smile_rate'] = np.round(smile_profile['hasSmile'] / smile_profile['msg_cnt'] * 100)
     smile_profile['is_smile'] = smile_profile.apply(
         lambda x: x['smile_rate'] > 30 if x['msg_cnt'] >= threshold else None, axis=1)
     return smile_profile
 
 def recalculate_smiles_for_user(user_id: int, df_bd: pd.DataFrame) -> list:
-    dx = smile_rate_calsulations(df_bd[df_bd['user_id'] == user_id])
+    dx = smile_rate_calsulations(df_bd[df_bd['uid'] == user_id])
     print(dx)
-    return {'smile_rate': dx.loc[user_id]['smile_rate'], 
-            'is_smile': dx.loc[user_id]['is_smile']}
-
+    return dx
